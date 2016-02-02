@@ -282,17 +282,18 @@
         return Math.floor(Math.log(val) / Math.LN10);
     },
     calculateScaleRange = methods.calculateScaleRange = function(valuesArray, drawingSize, textSize, startFromZero, integersOnly){
-
+        console.log(arguments);
         //Set a minimum step of two - a point at the top of the graph, and a point at the base
         var minSteps = 2,
-            maxSteps = Math.floor(drawingSize/(textSize * 1.5)),
+            maxSteps = Math.floor(drawingSize / (textSize * 1.5)),
             skipFitting = (minSteps >= maxSteps);
 
         // Filter out null values since these would min() to zero
         var values = [];
-        each(valuesArray, function( v ){
-            v == null || values.push( v );
+        each(valuesArray, function(v){
+            v == null || values.push(v);
         });
+        console.log(values);
         var minValue = min(values),
             maxValue = max(values);
 
@@ -363,20 +364,20 @@
             max : graphMin + (numberOfSteps * stepValue)
         };
     },
-    getDecimalPlaces = methods.getDecimalPlaces = function(num){
-        if (num%1!==0 && isNumber(num)){
+    getDecimalPlaces = methods.getDecimalPlaces = function (num) {
+        if (num%1 !== 0 && isNumber(num)) {
             var s = num.toString();
-            if(s.indexOf("e-") < 0){
+            if(s.indexOf('e-') < 0){
                 // no exponent, e.g. 0.01
-                return s.split(".")[1].length;
+                return s.split('.')[1].length;
             }
-            else if(s.indexOf(".") < 0) {
+            else if(s.indexOf('.') < 0) {
                 // no decimal point, e.g. 1e-9
                 return parseInt(s.split("e-")[1]);
             }
             else {
                 // exponent and decimal point, e.g. 1.23e-9
-                var parts = s.split(".")[1].split("e-");
+                var parts = s.split('.')[1].split('e-');
                 return parts[0].length + parseInt(parts[1]);
             }
         }
@@ -603,7 +604,7 @@
 
             var stepDecimalPlaces = getDecimalPlaces(this.stepValue);
 
-            for (var i=0; i<=this.steps; i++){
+            for (var i = 0; i <= this.steps; i++){
                 this.yLabels.push(template(this.templateString,{value:(this.min + (i * this.stepValue)).toFixed(stepDecimalPlaces)}));
             }
             this.yLabelWidth = (this.display && this.showLabels) ? longestText(this.ctx,this.font,this.yLabels) + 10 : 0;
@@ -619,6 +620,7 @@
             this.fit();
         },
         fit: function () {
+            console.log(this);
             this.startPoint = (this.display) ? this.fontSize : 0;
             this.endPoint = (this.display) ? this.height - (this.fontSize * 1.5) - 5 : this.height;
 
@@ -629,7 +631,6 @@
             var cachedHeight = this.endPoint - this.startPoint,
                 cachedYLabelWidth;
 
-            this.calculateYRange(cachedHeight);
             this.calculateYRange(cachedHeight);
 
             // With these properties set we can now build the array of yLabels
@@ -645,7 +646,6 @@
                 this.calculateYRange(cachedHeight);
                 this.buildYLabels();
 
-                // Only go through the xLabel loop again if the yLabel width has changed
                 if (cachedYLabelWidth < this.yLabelWidth){
                     this.endPoint = cachedEndPoint;
                     this.calculateXLabelRotation();
@@ -653,16 +653,12 @@
             }
         },
         calculateXLabelRotation : function(){
-            //Get the width of each grid by calculating the difference
-            //between x offsets between 0 and 1.
-
             this.ctx.font = this.font;
 
             var firstWidth = this.ctx.measureText(this.xLabels[0]).width,
                 lastWidth = this.ctx.measureText(this.xLabels[this.xLabels.length - 1]).width,
                 firstRotated,
                 lastRotated;
-
 
             this.xScalePaddingRight = lastWidth/2 + 3;
             this.xScalePaddingLeft = (firstWidth/2 > this.yLabelWidth) ? firstWidth/2 : this.yLabelWidth;
@@ -705,8 +701,6 @@
             }
 
         },
-        // Needs to be overidden in each Chart type
-        // Otherwise we need to pass all the data into the scale class
         calculateYRange: noop,
         drawingArea: function(){
             return this.startPoint - this.endPoint;
