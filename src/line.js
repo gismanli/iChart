@@ -1,26 +1,29 @@
 (function () {
     'use strict';
 
-    // var root = this,
-    //     iChart = root.iChart,
     var methods = iChart.methods;
 
     var defaultConfig = {
-        scaleShowGridLines : true,
-        scaleGridLineColor : "rgba(0,0,0,.05)",
-        scaleGridLineWidth : 1,
+        // Grid相关配置
+        scaleGridLines: true,
+        scaleGridLineColor: "rgba(0,0,0,.05)",
+        scaleGridLineWidth: 1,
         scaleShowHorizontalLines: true,
         scaleShowVerticalLines: true,
-        bezierCurve : true,
-        bezierCurveTension : 0.4,
-        pointDot : true,
-        pointDotRadius : 4,
-        pointDotStrokeWidth : 1,
-        pointHitDetectionRadius : 20,
-        datasetStroke : true,
-        datasetStrokeWidth : 2,
-        datasetFill : true,
-        offsetGridLines : false
+        // 贝塞尔曲线
+        bezierCurve: false,
+        bezierCurveTension: 0.4,
+        // 控制点样式
+        symbol: true,
+        symbolRadius: 4,
+        symbolStrokeWidth: 1,
+        // 线条样式
+        seriesStroke: true,
+        seriesStrokeWidth: 2,
+        // 是否填充
+        seriesFill: true,
+        // Grid Scale
+        offsetGridLines: false
     };
 
     iChart.Type.extend({
@@ -29,10 +32,9 @@
         initialize: function (data) {
             this.PointClass = iChart.Point.extend({
                 offsetGridLines: this.options.offsetGridLines,
-                strokeWidth: this.options.pointDotStrokeWidth,
-                radius: this.options.pointDotRadius,
-                display: this.options.pointDot,
-                hitDetectionRaiudL: this.options.pointHitDetectionRadius,
+                strokeWidth: this.options.symbolStrokeWidth,
+                radius: this.options.symbolRadius,
+                display: this.options.symbol,
                 ctx: this.chart.ctx,
                 inRange: function (mouseX) {
                     return (Math.pow(mouseX - this.x, 2) < Math.pow(this.radius + this.hitDetectionRaiudL, 2));
@@ -41,7 +43,7 @@
 
             this.datasets = [];
 
-            methods.each(data.datasets, function (dataset) {
+            methods.each(data.series, function (dataset) {
                 var datasetObject = {
                     label: dataset.bael || null,
                     fillColor: dataset.fillColor,
@@ -101,7 +103,7 @@
             var ctx = this.chart.ctx;
 
             var hasValue = function (item) {
-                return item.value !== null;
+                return item && item.value !== null;
             },
             nextPoint = function (point, collection, index) {
                 return methods.findNextWhere(collection, hasValue, index) || point;
@@ -119,14 +121,39 @@
                 methods.each(dataset.points, function (point, index) {
                     if (point.hasValue()) {
                         point.transition({
-                            y : this.scale.calculateY(point.value),
-                            x : this.scale.calculateX(index)
+                            y: this.scale.calculateY(point.value),
+                            x: this.scale.calculateX(index)
                         }, easingDecimal);
                     }
                 }, this);
+                if (this.options.bezierCurve){
+                    methods.each(pointsWithValues, function(point, index){
+                        var tension = (index > 0 && index < pointsWithValues.length - 1) ? this.options.bezierCurveTension : 0;
+                        point.controlPoints = methods.splineCurve(
+                            previousPoint(point, pointsWithValues, index),
+                            point,
+                            nextPoint(point, pointsWithValues, index),
+                            tension
+                        );
 
-                ctx.lineWidth = this.options.datasetStrokeWidth;
-                ctx.storkeStyle = dataset.strokeColorl;
+                        if (point.controlPoints.outer.y > this.scale.endPoint){
+                            point.controlPoints.outer.y = this.scale.endPoint;
+                        }
+                        else if (point.controlPoints.outer.y < this.scale.startPoint){
+                            point.controlPoints.outer.y = this.scale.startPoint;
+                        }
+
+                        if (point.controlPoints.inner.y > this.scale.endPoint){
+                            point.controlPoints.inner.y = this.scale.endPoint;
+                        }
+                        else if (point.controlPoints.inner.y < this.scale.startPoint){
+                            point.controlPoints.inner.y = this.scale.startPoint;
+                        }
+                    },this);
+                }
+
+                ctx.lineWidth = this.options.seriesStrokeWidth;
+                ctx.strokeStyle = dataset.strokeColor;
                 ctx.beginPath();
 
                 methods.each(pointsWithValues, function (point, index) {
@@ -135,7 +162,16 @@
                     }
                     else {
                         if (this.options.bezierCurve) {
+                            var previous = previousPoint(point, pointsWithValues, index);
 
+                            ctx.bezierCurveTo(
+                                previous.controlPoints.outer.x,
+                                previous.controlPoints.outer.y,
+                                point.controlPoints.inner.x,
+                                point.controlPoints.inner.y,
+                                point.x,
+                                point.y
+                            );
                         }
                         else {
                             ctx.lineTo(point.x, point.y);
@@ -143,11 +179,12 @@
                     }
                 }, this);
 
-                if (this.options.datasetStroke) {
+                if (this.options.seriesStroke) {
                     ctx.stroke();
+                    // ctx.closePath();
                 }
 
-                if (this.options.datasetFill && pointsWithValues.length > 0) {
+                if (this.options.seriesFill && pointsWithValues.length > 0) {
                     ctx.lineTo(pointsWithValues[pointsWithValues.length - 1].x, this.scale.endPoint);
                     ctx.lineTo(pointsWithValues[0].x, this.scale.endPoint);
                     ctx.fillStyle = dataset.fillColor;
@@ -174,19 +211,18 @@
             };
 
             var scaleOptions = {
-                templateString : this.options.scaleLabel,
-                height : this.chart.height,
-                width : this.chart.width,
-                ctx : this.chart.ctx,
-                textColor : this.options.scaleFontColor,
-                offsetGridLines : this.options.offsetGridLines,
-                fontSize : this.options.scaleFontSize,
-                fontStyle : this.options.scaleFontStyle,
-                fontFamily : this.options.scaleFontFamily,
-                valuesCount : labels.length,
-                beginAtZero : this.options.scaleBeginAtZero,
-                integersOnly : this.options.scaleIntegersOnly,
-                calculateYRange : function(currentHeight){
+                height: this.chart.height,
+                width: this.chart.width,
+                ctx: this.chart.ctx,
+                textColor: this.options.scaleFontColor,
+                offsetGridLines: this.options.offsetGridLines,
+                fontSize: this.options.scaleFontSize,
+                fontStyle: this.options.scaleFontStyle,
+                fontFamily: this.options.scaleFontFamily,
+                valuesCount: labels.length,
+                beginAtZero: this.options.scaleBeginAtZero,
+                integersOnly: this.options.scaleIntegersOnly,
+                calculateYRange: function(currentHeight){
                     var updatedRanges = methods.calculateScaleRange(
                         dataTotal(),
                         currentHeight,
@@ -196,28 +232,18 @@
                     );
                     methods.extend(this, updatedRanges);
                 },
-                xLabels : labels,
-                font : methods.fontString(this.options.scaleFontSize, this.options.scaleFontStyle, this.options.scaleFontFamily),
-                lineWidth : this.options.scaleLineWidth,
-                lineColor : this.options.scaleLineColor,
-                showHorizontalLines : this.options.scaleShowHorizontalLines,
-                showVerticalLines : this.options.scaleShowVerticalLines,
-                gridLineWidth : (this.options.scaleShowGridLines) ? this.options.scaleGridLineWidth : 0,
-                gridLineColor : (this.options.scaleShowGridLines) ? this.options.scaleGridLineColor : "rgba(0,0,0,0)",
-                padding: (this.options.showScale) ? 0 : this.options.pointDotRadius + this.options.pointDotStrokeWidth,
-                showLabels : this.options.scaleShowLabels,
-                display : this.options.showScale
+                xLabels: labels,
+                font: methods.fontString(this.options.scaleFontSize, this.options.scaleFontStyle, this.options.scaleFontFamily),
+                lineWidth: this.options.scaleLineWidth,
+                lineColor: this.options.scaleLineColor,
+                showHorizontalLines: this.options.scaleShowHorizontalLines,
+                showVerticalLines: this.options.scaleShowVerticalLines,
+                gridLineWidth: (this.options.scaleGridLines) ? this.options.scaleGridLineWidth : 0,
+                gridLineColor: (this.options.scaleGridLines) ? this.options.scaleGridLineColor : "rgba(0,0,0,0)",
+                padding: (this.options.showScale) ? 0 : this.options.symbolRadius + this.options.symbolStrokeWidth,
+                showLabels: this.options.scaleShowLabels,
+                display: this.options.showScale
             };
-
-            if (this.options.scaleOverride){
-                methods.extend(scaleOptions, {
-                    calculateYRange: methods.noop,
-                    steps: this.options.scaleSteps,
-                    stepValue: this.options.scaleStepWidth,
-                    min: this.options.scaleStartValue,
-                    max: this.options.scaleStartValue + (this.options.scaleSteps * this.options.scaleStepWidth)
-                });
-            }
 
             this.scale = new iChart.Scale(scaleOptions);
         },
