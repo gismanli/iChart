@@ -6,12 +6,12 @@
     var defaultConfig = {
         // Grid相关配置
         scaleGridLines: true,
-        scaleGridLineColor: "rgba(0,0,0,.05)",
+        scaleGridLineColor: "rgba(0, 0, 0, .05)",
         scaleGridLineWidth: 1,
         scaleShowHorizontalLines: true,
         scaleShowVerticalLines: true,
         // 贝塞尔曲线
-        bezierCurve: false,
+        bezierCurve: true,
         bezierCurveTension: 0.4,
         // 控制点样式
         symbol: true,
@@ -45,7 +45,7 @@
 
             methods.each(data.series, function (dataset) {
                 var datasetObject = {
-                    label: dataset.bael || null,
+                    label: dataset.lbael || null,
                     fillColor: dataset.fillColor,
                     strokeColor: dataset.strokeColor,
                     pointColor: dataset.pointColor,
@@ -68,7 +68,6 @@
                 }, this);
 
                 this.buildScale(data.labels);
-
                 this.eachPoints(function (point, index) {
                     methods.extend(point, {
                         x: this.scale.calculateX(index),

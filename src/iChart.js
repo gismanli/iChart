@@ -32,10 +32,6 @@
     iChart.defaults = {
         global: {
             showScale: true,
-            scaleOverride: false,
-            scaleSteps: null,
-            scaleStepWidth: null,
-            scaleStartValue: null,
             scaleLineColor: "rgba(0,0,0,.1)",
             scaleLineWidth: 1,
             scaleShowLabels: true,
@@ -363,7 +359,6 @@
         this.options = options;
         this.chart = chart;
         this.id = uid();
-
         iChart.instances[this.id] = this;
 
         // if (options.responsive) {
@@ -397,6 +392,7 @@
         reflow: noop,
         render: function (reflow) {
             if (reflow) {
+
                 reflow();
             }
 
@@ -460,15 +456,15 @@
             return this;
         },
         update: function (newProps) {
-            each(newProps, function (value, key) {
-                this._saved[key] = this[key];
-                this[key] = value;
+            each(newProps, function (key, value) {
+                this._saved[value] = this[value];
+                this[value] = key;
             }, this);
             return this;
         },
         transition: function (props, ease) {
-            each(props, function (value, key) {
-                this[key] = ((value - this._saved[key]) * ease) + this._saved[key];
+            each(props, function (key, value) {
+                this[value] = ((key - this._saved[value]) * ease) + this._saved[value];
             }, this);
             return this;
         },
@@ -499,6 +495,39 @@
                 ctx.fillStyle = this.fillColor;
 
                 ctx.fill();
+                ctx.stroke();
+            }
+        }
+    });
+
+    iChart.Rectangle = iChart.Element.extend({
+        draw: function () {
+            var ctx = this.ctx,
+                halfWidth = this.width/2,
+                leftX = this.x - halfWidth,
+                rightX = this.x + halfWidth,
+                top = this.base - (this.base - this.y),
+                halfStroke = this.strokeWidth / 2;
+
+            if (this.showStroke) {
+                leftX += halfStroke;
+                rightX -= halfStroke;
+                top += halfStroke;
+            }
+
+            ctx.beginPath();
+            ctx.fillStyle = this.fillColor;
+            ctx.strokeStyle = this.strokeColor;
+            ctx.strokeWidth = this.strokeWidth;
+
+            ctx.moveTo(leftX, this.base);
+            ctx.lineTo(leftX, top);
+            ctx.lineTo(rightX, top);
+            ctx.lineTo(rightX, this.base);
+
+            ctx.fill();
+
+            if (this.showStroke) {
                 ctx.stroke();
             }
         }
@@ -547,6 +576,11 @@
                 }
             }
         },
+        update: function(newProps){
+            methods.extend(this, newProps);
+            console.log(11);
+            this.fit();
+        },
         calculateXLabelRotation : function(){
             this.ctx.font = this.font;
 
@@ -592,7 +626,6 @@
                 this.xScalePaddingRight = this.padding;
                 this.xScalePaddingLeft = this.padding;
             }
-
         },
         calculateYRange: noop,
         drawingArea: function(){
@@ -604,7 +637,6 @@
         },
         calculateX : function(index){
             var isRotated = (this.xLabelRotation > 0),
-                // innerWidth = (this.offsetGridLines) ? this.width - offsetLeft - this.padding : this.width - (offsetLeft + halfLabelWidth * 2) - this.padding,
                 innerWidth = this.width - (this.xScalePaddingLeft + this.xScalePaddingRight),
                 valueWidth = innerWidth/Math.max((this.valuesCount - ((this.offsetGridLines) ? 0 : 1)), 1),
                 valueOffset = (valueWidth * index) + this.xScalePaddingLeft;
@@ -672,7 +704,7 @@
                 each(this.xLabels, function(label, index){
                     var xPos = this.calculateX(index) + aliasPixel(this.lineWidth),
                         linePos = this.calculateX(index - (this.offsetGridLines ? 0.5 : 0)) + aliasPixel(this.lineWidth),
-                        isRotated = (this.xLabelRotation > 0),
+                        isRotated = false,
                         drawVerticalLine = this.showVerticalLines;
 
                     if (index === 0 && !drawVerticalLine){

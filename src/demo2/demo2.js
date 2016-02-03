@@ -13,13 +13,13 @@ var data = {
         },
         {
             label: "My First dataset",
-            fillColor: "rgba(22,22,22,0.2)",
-            strokeColor: "rgba(22,22,22,1)",
-            pointColor: "rgba(22,22,22,1)",
+            fillColor: "rgba(111,111,111,0.2)",
+            strokeColor: "rgba(111,111,111,1)",
+            pointColor: "rgba(111,111,111,1)",
             pointStrokeColor: "#fff",
             pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(22,22,22,1)",
-            data: [165, 159, 180, 181, 156, 155, 510]
+            pointHighlightStroke: "rgba(111,111,111,1)",
+            data: [165, 159, 180, 181, 156, 155, 110]
         }
     ]
 };
